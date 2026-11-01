@@ -1,0 +1,163 @@
+/* TSP Visualizer – own stylesheet (Dash loads every file in assets/ automatically). */
+
+:root {
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --border: #e3e6ea;
+  --text: #1f2933;
+  --muted: #66727f;
+  --accent: #4f46e5;        /* buttons, focus */
+  --accent-hover: #4338ca;
+  --accent-soft: #eef0fd;
+  --route: #e11d48;         /* route line and numbered stops (stands out on the light map) */
+  --stop: #334155;          /* stops before a route is computed */
+  --ok: #15803d;   --ok-soft: #e7f6ec;
+  --warn: #b45309; --warn-soft: #fdf3e2;
+  --err: #b91c1c;  --err-soft: #fdecec;
+  --radius: 10px;
+  /* Dash 4 components (dropdowns, inputs) follow these variables */
+  --Dash-Fill-Interactive-Strong: var(--accent);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px; line-height: 1.45; color: var(--text); background: var(--bg);
+}
+
+/* ---------- layout ---------- */
+.app { display: grid; grid-template-columns: 400px 1fr; height: 100vh; }
+.sidebar {
+  overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;
+  border-right: 1px solid var(--border); background: var(--bg);
+}
+.map-wrap { position: relative; height: 100vh; min-width: 0; }
+.map { height: 100%; width: 100%; z-index: 0; }
+
+/* result panel floating on the map, right of Leaflet's zoom buttons */
+.result-panel {
+  position: absolute; top: 12px; left: 56px; z-index: 1000; width: 330px;
+  max-height: calc(100% - 24px); overflow-y: auto; box-shadow: 0 6px 24px rgba(15, 23, 42, 0.16);
+}
+.result-body { display: flex; flex-direction: column; gap: 10px; }
+.result-body > div:empty { display: none; }
+.result-panel:has(.result-empty) .result-actions { display: none; }  /* no buttons before a route exists */
+
+@media (max-width: 900px) {
+  /* narrow screens: sidebar, then map, then result below the map */
+  .app { grid-template-columns: 1fr; height: auto; }
+  .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+  .map-wrap { display: flex; flex-direction: column; height: auto; }
+  .map { height: 70vh; }
+  .result-panel { position: static; width: auto; max-height: none; box-shadow: none; margin: 12px; }
+}
+
+/* ---------- header ---------- */
+.app-header h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+.app-header p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+
+/* ---------- cards / steps ---------- */
+.card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px; display: flex; flex-direction: column; gap: 10px;
+}
+.card-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; margin: 0; }
+.card-title .count { margin-left: auto; font-weight: 500; color: var(--muted); font-size: 13px; }
+.step {
+  width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent);
+  font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+}
+.field-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.hint { color: var(--muted); font-size: 12.5px; }
+.row { display: flex; gap: 6px; align-items: center; }
+.grow { flex: 1; min-width: 0; }
+
+/* ---------- buttons ---------- */
+.btn {
+  font: inherit; font-size: 13px; font-weight: 500; border-radius: 8px; padding: 6px 10px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--panel); color: var(--text); white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.btn:hover { border-color: #c9ced5; background: #f3f4f6; }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-size: 14px; padding: 9px 12px; }
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-block { width: 100%; }
+.btn-link { border: none; background: none; color: var(--muted); padding: 2px 4px; }
+.btn-link:hover { background: none; color: var(--err); }
+
+/* ---------- location list ---------- */
+.loc-list { list-style: none; margin: 0; padding: 0; max-height: 28vh; overflow-y: auto;
+            border: 1px solid var(--border); border-radius: 8px; }
+.loc-item { display: flex; align-items: center; gap: 8px; padding: 2px 4px 2px 8px; border-top: 1px solid var(--border); }
+.loc-item:first-child { border-top: none; }
+.loc-item:hover { background: #f8f9fb; }
+.loc-index { width: 20px; color: var(--muted); font-size: 12px; text-align: right; flex: none; }
+.loc-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.loc-delete {
+  border: none; background: none; color: #9aa4ae; cursor: pointer; font-size: 16px; line-height: 1;
+  width: 22px; height: 22px; border-radius: 6px; flex: none; opacity: 0.55;
+}
+.loc-item:hover .loc-delete, .loc-delete:focus-visible { opacity: 1; }
+.loc-delete:hover { background: var(--err-soft); color: var(--err); }
+.empty { color: var(--muted); font-size: 13px; padding: 10px; text-align: center;
+         border: 1px dashed var(--border); border-radius: 8px; }
+
+/* ---------- segmented control (mode of transport) ---------- */
+.segmented { display: flex; background: #eef0f3; border-radius: 8px; padding: 3px; gap: 3px; }
+.segmented label { flex: 1; margin: 0; display: flex; justify-content: center; padding: 5px 0; border-radius: 6px;
+                   cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); }
+.segmented label:hover { color: var(--text); }
+.segmented .dash-options-list-option-wrapper { display: none; }  /* hide the radio circle */
+.segmented label.selected,
+.segmented label:has(input:checked) { background: var(--panel); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
+
+/* ---------- inputs ---------- */
+.number-input {
+  font: inherit; width: 80px; padding: 6px 8px; text-align: right; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--panel); color: var(--text);
+}
+.number-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+.suffix { color: var(--muted); }
+
+/* ---------- messages ---------- */
+.message:empty { display: none; }
+.message { font-size: 13px; color: var(--err); }
+.message .success { color: var(--ok); }
+.message .details { color: var(--muted); margin-top: 2px; }
+.alert { border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+.alert-warning { background: var(--warn-soft); color: var(--warn); }
+.alert-error { background: var(--err-soft); color: var(--err); }
+
+/* ---------- result ---------- */
+.result-empty { color: var(--muted); font-size: 13px; }
+.badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12.5px;
+         border-radius: 999px; padding: 3px 10px; align-self: flex-start; }
+.badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.badge-ok { background: var(--ok-soft); color: var(--ok); }
+.badge-warn { background: var(--warn-soft); color: var(--warn); }
+.stats { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 6px; }
+.stat { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+.stat-value { font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stat-label { font-size: 11.5px; color: var(--muted); }
+.tour { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px;
+        max-height: 30vh; overflow-y: auto; }
+.tour li { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.tour-num { width: 22px; height: 22px; border-radius: 50%; background: var(--route); color: #fff; flex: none;
+            font-size: 11.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.tour-num.back { background: none; color: var(--route); border: 1.5px solid var(--route); }
+
+/* ---------- map markers ---------- */
+.leaflet-tooltip.stop-number {
+  background: none; border: none; box-shadow: none; padding: 0; margin: 0;
+  color: #fff; font-weight: 700; font-size: 11.5px; font-family: inherit;
+}
+.leaflet-tooltip.stop-number::before { display: none; }
+.leaflet-container { font-family: inherit; background: #e9ecef; }
+/* faded OpenStreetMap tiles for the "Light" base layer */
+.tiles-light { filter: grayscale(0.75) brightness(1.06) contrast(0.88); }
+
+/* Dash 4 dropdown: a bit tighter to match the rest */
+.dash-dropdown { font-size: 14px; }

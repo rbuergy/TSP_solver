@@ -1,11 +1,6 @@
-
-dash
-dash-leaflet
+dash>=2.16
+dash-leaflet>=1.0
 requests
-json5
 numpy
-scipy
-ipython
 folium
 ortools
-tk

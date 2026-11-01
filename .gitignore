@@ -1,2 +1,16 @@
+# your personal OpenRouteService key (see API_KEY.example.txt)
+API_KEY.txt
+
+# Python
 __pycache__/
+.venv/
+venv/
+
+# generated route pages
 temp_route_visualization.html
+temp_route_download.html
+saved_routes/
+
+# local leftovers
+_backup_original/
+.DS_Store
