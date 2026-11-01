@@ -4,7 +4,6 @@ import threading
 import time
 from functools import lru_cache
 from itertools import permutations
-from pathlib import Path
 
 import folium
 import numpy as np
@@ -20,7 +19,6 @@ NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 ORS_URL = "https://api.openrouteservice.org/v2"
 REQUEST_TIMEOUT = 30  # seconds
 
-ROUTE_HTML_PATH = Path(__file__).resolve().parent / "temp_route_visualization.html"
 ROUTE_COLOR = "#e11d48"  # same red as in the app (assets/app.css)
 
 
@@ -145,7 +143,7 @@ class TravelTimeCalculator:
 
     def _post(self, path, body, labels=None):
         if not self.api_key:
-            raise ServiceError("No OpenRouteService API key found. Paste it into API_KEY.txt and restart the app.")
+            raise ServiceError("Please enter your OpenRouteService API key (in step 2, Solver).")
         headers = {
             "Accept": "application/json, application/geo+json",
             "Authorization": self.api_key,
@@ -164,7 +162,7 @@ class TravelTimeCalculator:
                 detail = response.text[:200]
             detail = self._label_coordinates(detail, labels)
             if response.status_code in (401, 403):
-                detail = f"{detail} (is the API key in API_KEY.txt valid?)"
+                detail = f"{detail} (is your OpenRouteService API key valid?)"
             elif "routable point" in str(detail):
                 detail = (f"{str(detail).rstrip('.')}. This location is too far from a road usable for this mode of transport; "
                           f"try a more precise address (e.g. 'Bahnhof, <town>') or another mode of transport.")
@@ -203,8 +201,8 @@ class TravelTimeCalculator:
 
     @staticmethod
     def visualize_tsp_tour(route, ordered_names, ordered_coordinates, total_duration_minutes,
-                           for_file=False, subtitle="", out_path=None):
-        """Write a standalone HTML page with the route (used by 'Open in new tab' and 'Download').
+                           for_file=False, subtitle=""):
+        """Return a standalone HTML page (as text) with the route, used by 'Open in new tab' and 'Download'.
 
         Base maps: OpenStreetMap's tile servers refuse requests without an HTTP Referer header, which is
         what a page opened from disk (file://) sends. So a page meant to be saved as a file starts with
@@ -267,9 +265,7 @@ class TravelTimeCalculator:
         </div>"""
         m.get_root().html.add_child(folium.Element(panel))
         m.get_root().title = "TSP route"
-        out_path = Path(out_path or ROUTE_HTML_PATH)
-        m.save(str(out_path))
-        return out_path
+        return m.get_root().render()
 
 
 # --------------------------------------------------------------------------------------------

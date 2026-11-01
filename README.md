@@ -26,7 +26,9 @@ To use the App, you'll need a Free OpenRouteService API Key.
 3. Once logged in, navigate to the Dashboard --> "Tokens" section.
 4. Here, you can create a new API token or manage existing ones.
 
-Now copy `API_KEY.example.txt` to `API_KEY.txt` (same folder) and paste your key into it, replacing the placeholder text. `API_KEY.txt` is listed in `.gitignore`, so your key is never committed.
+Enter the key in the app (step 2, *Solver*, field *OpenRouteService API key*). It is stored only in your browser and sent along with each route request; the server does not keep it.
+
+For local use you can also store a default key: copy `API_KEY.example.txt` to `API_KEY.txt` and paste your key into it (or set the environment variable `ORS_API_KEY`). It is used whenever the field in the app is empty. `API_KEY.txt` is listed in `.gitignore`, so it is never committed.
 
 Existing TSP Solving Methods
 -----------------------------
@@ -49,7 +51,7 @@ To contribute to this project, ensure that any new methods or changes are thorou
 
 Running the App
 -----------------
-After cloning the repository make sure you have created `API_KEY.txt` with a valid key (see above), then start the app in a local virtual environment:
+After cloning the repository, start the app in a local virtual environment:
 
 1. **Create the virtual environment** (only once, from the project folder):
 
@@ -87,7 +89,19 @@ Using the App
 - **Load example…** replaces the list with a ready-made scenario: *Around Fribourg* (8 towns, small enough for Permutations), *Luzern sightseeing (walking)* (7 sights, sets walking), *European capitals* (12, too many for Permutations within a minute) and *Swiss cantonal capitals* (26, for the exact methods FlowBased / ConstraintProgramming).
 - **Export CSV** saves the current list; **Import CSV** loads a list (replacing the current one). See *Location lists (CSV)* below.
 - Locations and settings (transport mode, method, time limit) are stored in your browser, so they survive a page reload or a browser restart. The last computed route is kept as well, as long as the list of locations is unchanged; adding or removing a location discards it. **Clear all** empties the list.
-- **Open in new tab** shows the route as a standalone page; **Download route** saves that page as an HTML file.
+- **Open in new tab** shows the route as a standalone page; **Download** saves that page as an HTML file.
+
+Run it online (Hugging Face Spaces)
+-----------------------------------
+The app can run for free as a Hugging Face *Space*; every user then enters their own OpenRouteService key.
+
+1. Create a free account at [huggingface.co](https://huggingface.co) and a new Space: *New → Space*, SDK **Docker**, template *Blank*, hardware *CPU basic (free)*.
+2. Upload the two files from [`deploy/huggingface/`](deploy/huggingface/) (`Dockerfile` and `README.md`) to the Space (*Files → Add file → Upload files*). The Space then builds the app directly from this GitHub repository.
+3. After new commits on GitHub, update the Space with *Settings → Factory rebuild*.
+
+Notes: the free hardware is shared (2 CPUs), so the solver time limit is capped at 120 s (`MAX_TIME_LIMIT`). A Space goes to sleep after about two days without visitors and wakes up on the next visit. Do not set `ORS_API_KEY` on a public Space, otherwise everybody uses your key.
+
+The root `Dockerfile` runs the same setup anywhere else: `docker build -t tsp-visualizer . && docker run -p 7860:7860 tsp-visualizer`.
 
 Location lists (CSV)
 --------------------
@@ -106,7 +120,7 @@ Zürich,,,
 Troubleshooting
 ---------------
 - *Location search*: suggestions come from [Photon](https://photon.komoot.io) (OpenStreetMap data, free, no key, built for search-as-you-type). If Photon is unavailable, the app falls back to OpenStreetMap Nominatim, which only returns the single best hit (Nominatim's usage policy forbids search-as-you-type, allows at most one request per second and requires an identifying User-Agent; the app takes care of this, see `USER_AGENT` in `tsp_logic.py`).
-- *"OpenRouteService error 401/403"*: check the key in `API_KEY.txt`.
+- *"OpenRouteService error 401/403"*: check the key entered in the app (or in `API_KEY.txt`).
 - *Long routes (e.g. across continents)*: OpenRouteService limits route length per request; the app then requests each leg separately.
 
 Specifying Locations

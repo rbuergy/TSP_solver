@@ -1,0 +1,8 @@
+API_KEY.txt
+.venv/
+venv/
+__pycache__/
+_backup_original/
+temp_route_*.html
+.git/
+deploy/

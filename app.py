@@ -1,27 +1,37 @@
 import base64
+import os
+from collections import OrderedDict
 import json
 import re
 import threading
 import time
+import unicodedata
 import uuid
-import webbrowser
 from pathlib import Path
 
 import dash_leaflet as dl
-import flask
 from dash import ALL, Dash, Input, Output, State, callback_context, dcc, html, no_update
 
 import locations_io
-from tsp_logic import ROUTE_HTML_PATH, ServiceError, TravelTimeCalculator, TSPMethodFactory, TSPSolverInterface, suggest
+from tsp_logic import ServiceError, TravelTimeCalculator, TSPMethodFactory, TSPSolverInterface, suggest
 
 BASE_DIR = Path(__file__).resolve().parent
 KEY_FILE = BASE_DIR / "API_KEY.txt"
-DOWNLOAD_HTML_PATH = BASE_DIR / "temp_route_download.html"  # separate from the page served at /route-page
-API_KEY = KEY_FILE.read_text(encoding="utf-8").strip() if KEY_FILE.exists() else ""
-if API_KEY.lower().startswith("paste"):  # placeholder text from API_KEY.example.txt
-    API_KEY = ""
 
-TSPInterface = TSPSolverInterface(API_KEY)
+
+def _server_key():
+    """Optional key of whoever runs the server: environment variable ORS_API_KEY or the file API_KEY.txt.
+    Used only when a user has not entered a key of their own. On a public server, leave both unset so that
+    every user has to use their own key."""
+    key = os.environ.get("ORS_API_KEY", "").strip()
+    if not key and KEY_FILE.exists():
+        key = KEY_FILE.read_text(encoding="utf-8").strip()
+    return "" if key.lower().startswith("paste") else key  # placeholder text from API_KEY.example.txt
+
+
+SERVER_KEY = _server_key()
+# Upper bound for the solver time limit; set e.g. MAX_TIME_LIMIT=120 on a shared server.
+MAX_TIME_LIMIT = int(os.environ.get("MAX_TIME_LIMIT", "3600"))
 
 # No external stylesheet: the look is defined in assets/app.css (served by Dash automatically),
 # so the app also works without access to a CDN.
@@ -57,9 +67,6 @@ sidebar = html.Aside([
         html.P("Shortest round trip through all locations – the Travelling Salesman Problem"),
     ], className="app-header"),
 
-    html.Div("No OpenRouteService API key found: copy API_KEY.example.txt to API_KEY.txt and paste your key. "
-             "Locations can be added, but routes cannot be computed.",
-             className="alert alert-warning", style={"display": "none" if API_KEY else "block"}),
 
     card(1, "Locations",
          # Searchable dropdown filled from the server while typing: arrows / click to choose, Enter = first hit.
@@ -95,9 +102,18 @@ sidebar = html.Aside([
                             value="TwoOpt", clearable=False, searchable=False,
                             persistence=True, persistence_type="local"),
                html.Div(id="method-hint", className="hint")),
+         field("OpenRouteService API key",
+               dcc.Input(id="api-key", type="password", debounce=True, className="text-input",
+                         placeholder="Uses the server's key" if SERVER_KEY else "Paste your key",
+                         autoComplete="off", persistence=True, persistence_type="local"),
+               html.Div(["Needed for travel times and routes. ",
+                         html.A("Get a free key", href="https://openrouteservice.org/dev/#/signup", target="_blank",
+                                rel="noopener"),
+                         " · stored only in this browser."], className="hint")),
          html.Div([
              html.Div("Time limit", className="field-label grow"),
-             dcc.Input(type="number", id="time-limit", min=1, step=1, value=60, className="number-input",
+             dcc.Input(type="number", id="time-limit", min=1, max=MAX_TIME_LIMIT, step=1, value=60,
+                       className="number-input",
                        persistence=True, persistence_type="local"),
              html.Span("s", className="suffix"),
          ], className="row"),
@@ -115,7 +131,8 @@ result_panel = card(
         html.Div(id="path-display"),
     ], className="result-body")),
     html.Div([
-        html.Button("Open in new tab", id="open-tab-button", n_clicks=0, className="btn grow"),
+        html.A("Open in new tab", id="open-tab-link", href="#", target="_blank", rel="noopener",
+               className="btn grow", style={"textAlign": "center", "textDecoration": "none"}),
         html.Button("Download", id="save-route-button", n_clicks=0, className="btn grow",
                     title="Save the route as a standalone HTML page"),
     ], className="row result-actions"),
@@ -408,8 +425,9 @@ def render_result(locations, result):
     Output("result-store", "data"),
     Input("locations-store", "data"),
     State("result-store", "data"),
+    State("session-id", "data"),
 )
-def show_locations(locations, result):
+def show_locations(locations, result, session_id):
     """Shows the location list. A stored route is kept (e.g. after a page reload) as long as it was computed
     for exactly these locations; any change of the list invalidates it."""
     locations = locations or []
@@ -427,6 +445,7 @@ def show_locations(locations, result):
     head = (listing, f"{len(locations)} stop{'s' if len(locations) != 1 else ''}")
 
     if result and result.get("signature") == route_signature(locations):
+        remember_result(session_id, result)  # e.g. after a page reload or a server restart
         route_children, info, path, timing = render_result(locations, result)
         return (*head, [], compute_bounds(locations), route_children, info, path, timing, no_update)
     return (*head, make_markers(locations), compute_bounds(locations), [], EMPTY_RESULT, "", "", None)
@@ -465,18 +484,26 @@ def show_method_hint(method):
     State("transport", "value"),
     State("method", "value"),
     State("time-limit", "value"),
+    State("api-key", "value"),
+    State("session-id", "data"),
     prevent_initial_call=True,
 )
-def compute_route(_n, locations, transport_mode, tsp_method, time_limit):
+def compute_route(_n, locations, transport_mode, tsp_method, time_limit, api_key, session_id):
     locations = locations or []
     if len(locations) < 2:
         return no_update, no_update, error_box("Please add at least two locations to compute a route."), "", "", None
-    time_limit = max(1, int(time_limit or 60))
+    api_key = (api_key or "").strip() or SERVER_KEY
+    if not api_key:
+        return no_update, no_update, error_box(
+            "Please enter your OpenRouteService API key in step 2 (Solver). A free key is available at "
+            "openrouteservice.org."), "", "", None
+    time_limit = min(MAX_TIME_LIMIT, max(1, int(time_limit or 60)))
 
     names = [loc["name"] for loc in locations]
     coordinates = [loc["position"] for loc in locations]
     try:
-        result = TSPInterface.solve_tsp(names, coordinates, transport_mode, tsp_method, time_limit)
+        # a new interface per request: every user brings their own key, the server keeps none
+        result = TSPSolverInterface(api_key).solve_tsp(names, coordinates, transport_mode, tsp_method, time_limit)
     except ServiceError as e:
         print("Route error:", e)
         return [], make_markers(locations), error_box(str(e)), "", "", None
@@ -493,40 +520,50 @@ def compute_route(_n, locations, transport_mode, tsp_method, time_limit):
         # 5 decimals (~1 m) keep the browser storage small for long routes
         "route": [[round(lat, 5), round(lon, 5)] for lat, lon in result["route"]],
     }
+    remember_result(session_id, store)
     route_children, info, path, timing = render_result(locations, store)
     return route_children, [], info, path, timing, store
 
 
-def write_route_page(result, for_file=False):
-    """(Re)creates the standalone route page from the stored result, so it always matches what is shown."""
+# Last route per browser session, so /route-page/<session id> can show it ("Open in new tab").
+# Kept in memory only; run the server with ONE worker process (see Dockerfile).
+_RESULTS = OrderedDict()
+_RESULTS_LOCK = threading.Lock()
+MAX_REMEMBERED_RESULTS = 200
+
+
+def remember_result(session_id, result):
+    if not session_id or not result:
+        return
+    with _RESULTS_LOCK:
+        _RESULTS[session_id] = result
+        _RESULTS.move_to_end(session_id)
+        while len(_RESULTS) > MAX_REMEMBERED_RESULTS:
+            _RESULTS.popitem(last=False)
+
+
+def route_page_html(result, for_file=False):
+    """Standalone route page built from the stored result, so it always matches what is shown."""
     coordinates = [result["signature"][i] for i in result["tour"]]  # stop positions in visiting order
     subtitle = f"{result['method']} · {TRANSPORT_LABELS.get(result['transport'], result['transport'])}"
     return TravelTimeCalculator.visualize_tsp_tour(result["route"], result["ordered_names"], coordinates,
-                                                   result["total_minutes"], for_file=for_file, subtitle=subtitle,
-                                                   out_path=DOWNLOAD_HTML_PATH if for_file else ROUTE_HTML_PATH)
+                                                   result["total_minutes"], for_file=for_file, subtitle=subtitle)
 
 
-@app.server.route("/route-page")
-def route_page():
-    """Serves the last route page over http, so the browser sends a Referer header with the map tile
+@app.server.route("/route-page/<session_id>")
+def route_page(session_id):
+    """The route page is served over http(s), so the browser sends a Referer header with the map tile
     requests (OpenStreetMap blocks tile requests from pages opened as local files)."""
-    if not ROUTE_HTML_PATH.exists():
-        return "No route computed yet.", 404
-    return ROUTE_HTML_PATH.read_text(encoding="utf-8"), 200, {"Cache-Control": "no-store"}
+    with _RESULTS_LOCK:
+        result = _RESULTS.get(session_id)
+    if result is None:
+        return "No route computed yet – compute a route in the app first.", 404
+    return route_page_html(result), 200, {"Cache-Control": "no-store", "Content-Type": "text/html; charset=utf-8"}
 
 
-@app.callback(
-    Output("info", "children", allow_duplicate=True),
-    Input("open-tab-button", "n_clicks"),
-    State("result-store", "data"),
-    prevent_initial_call=True,
-)
-def open_in_tab(_n, result):
-    if not result:
-        return error_box("Please compute a route first.")
-    write_route_page(result)
-    webbrowser.open(f"{flask.request.host_url}route-page", new=2)
-    return no_update
+@app.callback(Output("open-tab-link", "href"), Input("session-id", "data"))
+def set_route_page_link(session_id):
+    return f"route-page/{session_id}"  # relative, so it also works behind a proxy or under a sub-path
 
 
 @app.callback(
@@ -539,16 +576,18 @@ def open_in_tab(_n, result):
 def download_route(_n, result):
     if not result:
         return no_update, error_box("Please compute a route first.")
-    path = write_route_page(result, for_file=True)
     stops = result["ordered_names"][:-1]
-    slug = re.sub(r"[^A-Za-z0-9]+", "_", "_".join(s.split(",")[0] for s in stops[:4])).strip("_") or "route"
+    plain = unicodedata.normalize("NFKD", "_".join(s.split(",")[0] for s in stops[:4])).encode("ascii", "ignore").decode()
+    slug = re.sub(r"[^A-Za-z0-9]+", "_", plain).strip("_") or "route"  # Düdingen -> Dudingen
     if len(stops) > 4:
         slug += f"_and_{len(stops) - 4}_more"
-    return dcc.send_file(str(path), filename=f"route_{slug}.html"), no_update
+    return dcc.send_string(route_page_html(result, for_file=True), filename=f"route_{slug}.html"), no_update
 
+
+server = app.server  # WSGI entry point for production servers, e.g. gunicorn app:server
 
 if __name__ == "__main__":
-    # debug=True: auto-reload on code changes and Dash dev tools (callback errors shown in the browser).
+    # Local use: debug=True gives auto-reload on code changes and Dash dev tools.
     # use_debugger=False: without Werkzeug's interactive debugger, which on macOS leaves a
     # "leaked semaphore" warning behind when the server is stopped with Ctrl+C.
     app.run(debug=True, use_debugger=False)
