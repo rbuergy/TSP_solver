@@ -1,6 +1,10 @@
 Traveling Salesman Problem (TSP) Solver
 =======================================
 
+**Try it online: <https://tsp-visualizer-c4o3.onrender.com>**
+
+You need your own free [OpenRouteService API key](https://openrouteservice.org/dev/#/signup) (enter it in the app; it stays in your browser). The app runs on a free plan: after a quiet period, the first visit can take about a minute while it wakes up.
+
 Introduction
 ------------
 This project provides various algorithms and methods to solve the classic Traveling Salesman Problem (TSP).
@@ -98,7 +102,7 @@ The app can run for free on [Render](https://render.com); every user then enters
 1. Sign up at Render with your GitHub account.
 2. Choose *New → Blueprint*, select this repository and confirm. Render reads [`render.yaml`](render.yaml) and creates a free web service built from the `Dockerfile`.
    (Alternatively *New → Web Service*, select the repository, language *Docker*, instance type *Free*.)
-3. After the first build (a few minutes) the app is available at an address like `https://tsp-visualizer.onrender.com`. Every push to `main` redeploys it automatically.
+3. After the first build (a few minutes) the app is available at an address like `https://<service-name>.onrender.com` (Render adds a suffix if the name is taken; the public instance of this repository runs at <https://tsp-visualizer-c4o3.onrender.com>). Every push to `main` redeploys it automatically.
 
 Notes: a free service goes to sleep after 15 minutes without visitors and needs about a minute to wake up, so open the app a few minutes before using it in class. The free instance is small (0.1 CPU, 512 MB), so solving is slower than on a laptop and the time limit is capped at 120 s (`MAX_TIME_LIMIT`). Do not set `ORS_API_KEY` on a public server, otherwise everybody uses your key.
 
