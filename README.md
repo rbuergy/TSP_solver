@@ -91,6 +91,23 @@ Using the App
 - Locations and settings (transport mode, method, time limit) are stored in your browser, so they survive a page reload or a browser restart. The last computed route is kept as well, as long as the list of locations is unchanged; adding or removing a location discards it. **Clear all** empties the list.
 - **Open in new tab** shows the route as a standalone page; **Download** saves that page as an HTML file.
 
+Run it online (Render)
+----------------------
+The app can run for free on [Render](https://render.com); every user then enters their own OpenRouteService key in the app.
+
+1. Sign up at Render with your GitHub account.
+2. Choose *New → Blueprint*, select this repository and confirm. Render reads [`render.yaml`](render.yaml) and creates a free web service built from the `Dockerfile`.
+   (Alternatively *New → Web Service*, select the repository, language *Docker*, instance type *Free*.)
+3. After the first build (a few minutes) the app is available at an address like `https://tsp-visualizer.onrender.com`. Every push to `main` redeploys it automatically.
+
+Notes: a free service goes to sleep after 15 minutes without visitors and needs about a minute to wake up, so open the app a few minutes before using it in class. The free instance is small (0.1 CPU, 512 MB), so solving is slower than on a laptop and the time limit is capped at 120 s (`MAX_TIME_LIMIT`). Do not set `ORS_API_KEY` on a public server, otherwise everybody uses your key.
+
+The `Dockerfile` runs the same setup anywhere else: `docker build -t tsp-visualizer . && docker run -p 7860:7860 tsp-visualizer`, then open http://localhost:7860.
+
+Location lists (CSV)* below.
+- Locations and settings (transport mode, method, time limit) are stored in your browser, so they survive a page reload or a browser restart. The last computed route is kept as well, as long as the list of locations is unchanged; adding or removing a location discards it. **Clear all** empties the list.
+- **Open in new tab** shows the route as a standalone page; **Download** saves that page as an HTML file.
+
 Run it online (Hugging Face Spaces)
 -----------------------------------
 The app can run for free as a Hugging Face *Space*; every user then enters their own OpenRouteService key.

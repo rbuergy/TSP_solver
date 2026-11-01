@@ -1,0 +1,14 @@
+# Render Blueprint: in Render choose New -> Blueprint and select this repository.
+# Free web service (0.1 CPU, 512 MB) built from the Dockerfile.
+services:
+  - type: web
+    name: tsp-visualizer
+    runtime: docker
+    plan: free
+    branch: main
+    autoDeployTrigger: commit   # redeploy on every push to main
+    healthCheckPath: /
+    envVars:
+      - key: MAX_TIME_LIMIT   # cap for the solver time limit on the shared free CPU
+        value: "120"
+      # Do not add ORS_API_KEY here: every user enters their own OpenRouteService key in the app.

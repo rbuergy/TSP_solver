@@ -19,4 +19,5 @@ COPY --chown=user . .
 EXPOSE 7860
 # One worker process: the route pages for "Open in new tab" are kept in that process's memory.
 # Several threads, so solving for one user does not block the others.
-CMD ["gunicorn", "app:server", "--bind", "0.0.0.0:7860", "--workers", "1", "--threads", "8", "--timeout", "300"]
+# Listens on $PORT if the platform sets it (Render, Cloud Run), otherwise on 7860.
+CMD ["sh", "-c", "exec gunicorn app:server --bind 0.0.0.0:${PORT:-7860} --workers 1 --threads 8 --timeout 300"]
