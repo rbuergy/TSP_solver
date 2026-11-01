@@ -4,9 +4,7 @@ Traveling Salesman Problem (TSP) Solver
 Introduction
 ------------
 This project provides various algorithms and methods to solve the classic Traveling Salesman Problem (TSP).
-The implementation took place as part of a Project at **HSLU (Lucerne School of Information Technology)** to function as a visual tool for the Modul of Industrial Optimization.
-
-Many Thanks go to **Reinhard Bürgy** who came up with the project.
+The implementation took place as part of a Project at **HSLU (Lucerne School of Information Technology)** to function as a visual tool for the Modul of Industrial Optimization. Many Thanks go to **Lino Giger** who implemented the first version of this project.
 
 About this fork
 ---------------
