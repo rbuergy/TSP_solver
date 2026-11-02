@@ -3,7 +3,7 @@ Traveling Salesman Problem (TSP) Solver
 
 **Try it online: <https://tsp-visualizer-c4o3.onrender.com>**
 
-You need your own free [OpenRouteService API key](https://openrouteservice.org/dev/#/signup) (enter it in the app; it stays in your browser). The app runs on a free plan: after a quiet period, the first visit can take about a minute while it wakes up.
+You need your own free [OpenRouteService API key](https://account.heigit.org/signup) (enter it in the app; it stays in your browser). The app runs on a free plan: after a quiet period, the first visit can take about a minute while it wakes up.
 
 Introduction
 ------------
@@ -25,10 +25,11 @@ To use the App, you'll need a Free OpenRouteService API Key.
 
 **Steps to generate one:**
 
-1. Visit the [OpenRouteService Sign Up page](https://openrouteservice.org/sign-up/).
-2. Create an account or sign in if you already have one.
-3. Once logged in, navigate to the Dashboard --> "Tokens" section.
-4. Here, you can create a new API token or manage existing ones.
+1. Sign up at the [HeiGIT account page](https://account.heigit.org/signup) (OpenRouteService is run by HeiGIT; keys are issued there since 2026).
+2. A new account comes with a free Standard API key, shown in your account dashboard at [account.heigit.org](https://account.heigit.org).
+3. Existing OpenRouteService keys keep working; you do not need a new one.
+
+The app calls the API at `https://api.heigit.org/openrouteservice/v2` (the old address `api.openrouteservice.org` was switched off in November 2026). If the address changes again, set the environment variable `ORS_BASE_URL`.
 
 Enter the key in the app (step 2, *Solver*, field *OpenRouteService API key*). It is stored only in your browser and sent along with each route request; the server does not keep it.
 

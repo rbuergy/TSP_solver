@@ -30,6 +30,7 @@ def _server_key():
 
 
 SERVER_KEY = _server_key()
+ORS_SIGNUP_URL = "https://account.heigit.org/signup"  # OpenRouteService keys are issued by HeiGIT
 # Upper bound for the solver time limit; set e.g. MAX_TIME_LIMIT=120 on a shared server.
 MAX_TIME_LIMIT = int(os.environ.get("MAX_TIME_LIMIT", "3600"))
 
@@ -103,11 +104,14 @@ sidebar = html.Aside([
                             persistence=True, persistence_type="local"),
                html.Div(id="method-hint", className="hint")),
          field("OpenRouteService API key",
-               dcc.Input(id="api-key", type="password", debounce=True, className="text-input",
+               # type "text" + CSS masking (class secret-input) instead of type "password": a password field
+               # makes browsers offer to save a password whenever the page changes (e.g. adding a location).
+               dcc.Input(id="api-key", type="text", debounce=True, className="text-input secret-input",
+                         spellCheck=False,
                          placeholder="Uses the server's key" if SERVER_KEY else "Paste your key",
                          autoComplete="off", persistence=True, persistence_type="local"),
                html.Div(["Needed for travel times and routes. ",
-                         html.A("Get a free key", href="https://openrouteservice.org/dev/#/signup", target="_blank",
+                         html.A("Get a free key", href=ORS_SIGNUP_URL, target="_blank",
                                 rel="noopener"),
                          " · stored only in this browser."], className="hint")),
          html.Div([
@@ -496,7 +500,7 @@ def compute_route(_n, locations, transport_mode, tsp_method, time_limit, api_key
     if not api_key:
         return no_update, no_update, error_box(
             "Please enter your OpenRouteService API key in step 2 (Solver). A free key is available at "
-            "openrouteservice.org."), "", "", None
+            "account.heigit.org."), "", "", None
     time_limit = min(MAX_TIME_LIMIT, max(1, int(time_limit or 60)))
 
     names = [loc["name"] for loc in locations]

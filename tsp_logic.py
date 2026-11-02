@@ -1,4 +1,5 @@
 import html
+import os
 import re
 import threading
 import time
@@ -16,7 +17,9 @@ from ortools.linear_solver import pywraplp
 # default "python-requests/x.y" agent are blocked with an HTML "Access blocked" page.
 USER_AGENT = "TSP-Visualizer/2.0 (teaching tool, Decision Science course)"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
-ORS_URL = "https://api.openrouteservice.org/v2"
+# OpenRouteService moved to the HeiGIT API host in 2026; api.openrouteservice.org is switched off.
+# Existing API keys work unchanged. Can be overridden with the environment variable ORS_BASE_URL.
+ORS_URL = os.environ.get("ORS_BASE_URL", "https://api.heigit.org/openrouteservice/v2").rstrip("/")
 REQUEST_TIMEOUT = 30  # seconds
 
 ROUTE_COLOR = "#e11d48"  # same red as in the app (assets/app.css)
