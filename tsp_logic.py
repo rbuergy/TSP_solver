@@ -147,6 +147,10 @@ class TravelTimeCalculator:
     def _post(self, path, body, labels=None):
         if not self.api_key:
             raise ServiceError("Please enter your OpenRouteService API key (in step 2, Solver).")
+        if not (self.api_key.isascii() and self.api_key.isprintable()) or " " in self.api_key:
+            # e.g. masking dots "•" copied instead of the key; would otherwise crash in the HTTP header
+            raise ServiceError("The API key contains characters that cannot be part of a key (for example "
+                               "masking dots '•' copied instead of the key). Please paste your key again.")
         headers = {
             "Accept": "application/json, application/geo+json",
             "Authorization": self.api_key,

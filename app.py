@@ -5,6 +5,7 @@ import json
 import re
 import threading
 import time
+import traceback
 import unicodedata
 import uuid
 from pathlib import Path
@@ -511,6 +512,9 @@ def compute_route(_n, locations, transport_mode, tsp_method, time_limit, api_key
     except ServiceError as e:
         print("Route error:", e)
         return [], make_markers(locations), error_box(str(e)), "", "", None
+    except Exception as e:  # unexpected: show it instead of failing silently with "500" in the browser
+        traceback.print_exc()
+        return [], make_markers(locations), error_box(f"Unexpected error ({type(e).__name__}): {e}"), "", "", None
 
     store = {
         "signature": route_signature(locations),
